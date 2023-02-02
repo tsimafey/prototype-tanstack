@@ -27,6 +27,29 @@ export interface IDataRow {
   lastUpdate: string,
 }
 
+const defaultColumns: ColumnDef<IDataRow, any>[] = [
+    {
+      header: 'Company',
+      accessorKey: 'company',
+    },
+    {
+      header: 'Status',
+      accessorKey: 'status',
+    },
+    {
+      header: 'Credit limit',
+      accessorKey: 'creditLimit',
+    },
+    {
+      header: 'Terms',
+      accessorKey: 'terms',
+    },
+    {
+      header: 'Last update',
+      accessorKey: 'lastUpdate',
+    },
+  ];
+
 function App() {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -34,31 +57,10 @@ function App() {
   );
   const [globalFilter, setGlobalFilter] = React.useState('');
 
-  const columns = React.useMemo<ColumnDef<IDataRow, any>[]>(
-    () => [
-      {
-        header: 'Company',
-        accessorKey: 'company',
-      },
-      {
-        header: 'Status',
-        accessorKey: 'status',
-      },
-      {
-        header: 'Credit limit',
-        accessorKey: 'creditLimit',
-      },
-      {
-        header: 'Terms',
-        accessorKey: 'terms',
-      },
-      {
-        header: 'Last update',
-        accessorKey: 'lastUpdate',
-      },
-    ],
-    []
-  );
+  const [columns] = React.useState<typeof defaultColumns>(() => [
+    ...defaultColumns,
+  ])
+  const [columnVisibility, setColumnVisibility] = React.useState({})
 
   const [data, setData] = React.useState<IDataRow[]>(() => makeData(50000))
 
@@ -68,10 +70,12 @@ function App() {
     state: {
       columnFilters,
       globalFilter,
+      columnVisibility,
     },
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     debugTable: true,
@@ -103,6 +107,24 @@ function App() {
 
   return (
     <div className="p-2">
+      <div className="inline-block border border-black shadow rounded">
+        {table.getAllLeafColumns().map(column => {
+          return (
+            <div key={column.id} className="px-1">
+              <label>
+                <input
+                  {...{
+                    type: 'checkbox',
+                    checked: column.getIsVisible(),
+                    onChange: column.getToggleVisibilityHandler(),
+                  }}
+                />{' '}
+                {column.id}
+              </label>
+            </div>
+          )
+        })}
+      </div>
       <div>
         <DebouncedInput
           value={globalFilter ?? ''}
