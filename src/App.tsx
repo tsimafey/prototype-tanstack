@@ -6,22 +6,19 @@ import {
   getSortedRowModel,
   getFilteredRowModel,
   Row,
-  SortingState,
   useReactTable,
   ColumnFiltersState,
-  FilterFn,
 } from '@tanstack/react-table';
 import { useVirtual } from 'react-virtual';
 
-import { rankItem } from '@tanstack/match-sorter-utils'
-
-import { DebouncedInput } from './DebouncedInput';
 import { makeData } from './makeData';
 import { Filter } from './Filter';
 
+export const STATUSES = ['Needs review', 'Incomplete', 'Changes requested', 'Pending approval', 'Approved']
+
 export interface IDataRow {
   company: string,
-  status: 'Needs review' | 'Incomplete' | 'Changes requested' | 'Pending approval' | 'Approved',
+  status: typeof STATUSES[number],
   creditLimit: number,
   terms: string,
   lastUpdate: string,
@@ -31,6 +28,7 @@ const defaultColumns: ColumnDef<IDataRow, any>[] = [
     {
       header: 'Company',
       accessorKey: 'company',
+      enableColumnFilter: false,
     },
     {
       header: 'Status',
@@ -39,22 +37,22 @@ const defaultColumns: ColumnDef<IDataRow, any>[] = [
     {
       header: 'Credit limit',
       accessorKey: 'creditLimit',
+      enableColumnFilter: false,
     },
     {
       header: 'Terms',
       accessorKey: 'terms',
+      enableColumnFilter: false,
     },
     {
       header: 'Last update',
       accessorKey: 'lastUpdate',
+      enableColumnFilter: false,
     },
   ];
 
 function App() {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  );
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = React.useState('');
 
   const [columns] = React.useState<typeof defaultColumns>(() => [
@@ -62,7 +60,7 @@ function App() {
   ])
   const [columnVisibility, setColumnVisibility] = React.useState({})
 
-  const [data, setData] = React.useState<IDataRow[]>(() => makeData(50000))
+  const [data] = React.useState<IDataRow[]>(() => makeData(50000))
 
   const table = useReactTable({
     data,
@@ -79,23 +77,23 @@ function App() {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     debugTable: true,
-  })
+  });
 
-  const tableContainerRef = React.useRef<HTMLDivElement>(null)
+  const tableContainerRef = React.useRef<HTMLDivElement>(null);
 
   const { rows } = table.getRowModel()
   const rowVirtualizer = useVirtual({
     parentRef: tableContainerRef,
     size: rows.length,
     overscan: 10,
-  })
-  const { virtualItems: virtualRows, totalSize } = rowVirtualizer
+  });
+  const { virtualItems: virtualRows, totalSize } = rowVirtualizer;
 
-  const paddingTop = virtualRows.length > 0 ? virtualRows?.[0]?.start || 0 : 0
+  const paddingTop = virtualRows.length > 0 ? virtualRows?.[0]?.start || 0 : 0;
   const paddingBottom =
     virtualRows.length > 0
       ? totalSize - (virtualRows?.[virtualRows.length - 1]?.end || 0)
-      : 0
+      : 0;
 
   React.useEffect(() => {
     if (table.getState().columnFilters[0]?.id === 'company') {
@@ -103,7 +101,9 @@ function App() {
         table.setSorting([{ id: 'company', desc: false }])
       }
     }
-  }, [table.getState().columnFilters[0]?.id])
+  }, [table.getState().columnFilters[0]?.id]);
+
+  const companyColumn = table.getHeaderGroups()[0].headers.find((header) => header.id === 'company')?.column
 
   return (
     <div className="p-2">
@@ -126,18 +126,16 @@ function App() {
         })}
       </div>
       <div>
-        <DebouncedInput
-          value={globalFilter ?? ''}
-          onChange={value => setGlobalFilter(String(value))}
-          className="p-2 font-lg shadow border border-block"
-          placeholder="Search all columns..."
-        />
+        {companyColumn && (
+          <Filter column={companyColumn} />
+        )}
       </div>
       <div className="h-2" />
       <div ref={tableContainerRef} className="container">
         <table>
           <thead>
-            {table.getHeaderGroups().map(headerGroup => (
+            {table.getHeaderGroups().map(headerGroup => {
+              return (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map(header => {
                   return (
@@ -167,7 +165,7 @@ function App() {
                           </div>
                           {header.column.getCanFilter() ? (
                           <div>
-                            <Filter column={header.column} table={table} />
+                            <Filter column={header.column} />
                           </div>
                         ) : null}
                         </>
@@ -176,7 +174,7 @@ function App() {
                   )
                 })}
               </tr>
-            ))}
+            )})}
           </thead>
           <tbody>
             {paddingTop > 0 && (
